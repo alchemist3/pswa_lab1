@@ -6,17 +6,15 @@ import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
-import java.util.ServiceConfigurationError;
+import java.util.*;
 import java.util.concurrent.CyclicBarrier;
 
 public class ProducerAgent extends Agent {
     private Integer id = 0;
-    private int maxTokens = 150;
+    private int maxTokens = 100;
     private Queue<String> tokens = new LinkedList<String>();
     private Map<String, Integer> givenTokens = new HashMap<String, Integer>();
     private CyclicBehaviour mainBehaviour;
@@ -55,12 +53,51 @@ public class ProducerAgent extends Agent {
                 }
             }
         });
-        giveToken();
 
-    }
+        // Add a CyclicBehaviour that
+        addBehaviour(new CyclicBehaviour(this) {
+            @Override
+            public void action() {
+                // Prepare template to get messages from consumer agents
+                MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+                // Receive requests from consumer agents
+                ACLMessage requests = receive(mt);
+                if (requests != null) {
+                    // Create replies for consumer agents
+                    ACLMessage reply = requests.createReply();
 
+                    Iterator<String> itr = tokens.iterator();
+                    if (itr.hasNext()) {
+                        String token = itr.next().toString();
+                        reply.setPerformative(ACLMessage.CONFIRM);
+                        reply.setContent(token);
+                        itr.remove();
+                        System.out.println(getAID().getLocalName() + ": gives token nr" + token);
+                        if (givenTokens.get(requests.getContent()) == null) {
+                            givenTokens.put(requests.getContent(), 1);
+                        } else {
+                            int count = givenTokens.get(requests.getContent());
+                            givenTokens.remove(requests.getContent());
+                            givenTokens.put(requests.getContent(), count + 1);
+                        }
 
-    private void giveToken() {
-        // TODO
+                    } else {
+                        if (id == maxTokens) {
+                            reply.setPerformative(ACLMessage.FAILURE);
+                            reply.setContent("not-available");
+                            System.out.println("All tokens created and taken by consumers");
+                        } else {
+                            reply.setPerformative(ACLMessage.INFORM);
+                            reply.setContent("not-available");
+                            System.out.println(getAID().getLocalName() + ": there are no available tokens now");
+                        }
+                    }
+                    send(reply);
+                } else {
+                    block();
+                }
+            }
+        });
+
     }
 }
