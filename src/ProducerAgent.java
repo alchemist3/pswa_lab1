@@ -8,9 +8,8 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-
 import java.util.*;
-import java.util.concurrent.CyclicBarrier;
+
 
 public class ProducerAgent extends Agent {
     private Integer id = 0;
@@ -46,7 +45,7 @@ public class ProducerAgent extends Agent {
             protected void onTick() {
                 if (id < maxTokens) {
                     tokens.add(id.toString());
-                    System.out.println(getAID().getLocalName() + " created token nr " + id);
+                    System.out.println(getAID().getLocalName() + ": created token nr " + id);
                     id++;
                 } else {
                     removeBehaviour(this);
@@ -72,7 +71,7 @@ public class ProducerAgent extends Agent {
                         reply.setPerformative(ACLMessage.CONFIRM);
                         reply.setContent(token);
                         itr.remove();
-                        System.out.println(getAID().getLocalName() + ": gives token nr" + token);
+                        System.out.println(getAID().getLocalName() + ": gives token nr " + token);
                         if (givenTokens.get(requests.getContent()) == null) {
                             givenTokens.put(requests.getContent(), 1);
                         } else {
@@ -85,7 +84,6 @@ public class ProducerAgent extends Agent {
                         if (id == maxTokens) {
                             reply.setPerformative(ACLMessage.FAILURE);
                             reply.setContent("not-available");
-                            System.out.println("All tokens created and taken by consumers");
                         } else {
                             reply.setPerformative(ACLMessage.INFORM);
                             reply.setContent("not-available");
